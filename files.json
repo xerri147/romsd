@@ -1,4 +1,151 @@
 {
-  "files": [],
-  "generated": null
+  "files": [
+    {
+      "name": "cli",
+      "folder": true,
+      "path": [
+        "cloud1",
+        "Python"
+      ],
+      "size": null,
+      "extension": null,
+      "modified": "2026-09-15 07:28:46",
+      "description": null,
+      "url": null
+    },
+    {
+      "name": "cloud1",
+      "folder": true,
+      "path": [],
+      "size": null,
+      "extension": null,
+      "modified": "2026-09-16 17:47:08",
+      "description": null,
+      "url": null
+    },
+    {
+      "name": "Python",
+      "folder": true,
+      "path": [
+        "cloud1"
+      ],
+      "size": null,
+      "extension": null,
+      "modified": "2026-09-16 17:47:08",
+      "description": null,
+      "url": null
+    },
+    {
+      "name": "ref",
+      "folder": true,
+      "path": [
+        "cloud1",
+        "Python"
+      ],
+      "size": null,
+      "extension": null,
+      "modified": "2026-09-16 17:47:08",
+      "description": null,
+      "url": null
+    },
+    {
+      "name": "exercise-2.pdf",
+      "folder": false,
+      "path": [
+        "cloud1",
+        "Python",
+        "ref"
+      ],
+      "size": 427818,
+      "extension": "pdf",
+      "modified": null,
+      "description": "exercise,2,pdf",
+      "url": "https://www.udrop.com/PHjS"
+    },
+    {
+      "name": "exp 1.py",
+      "folder": false,
+      "path": [
+        "cloud1",
+        "Python",
+        "cli"
+      ],
+      "size": 244,
+      "extension": "py",
+      "modified": null,
+      "description": "exp1,py",
+      "url": "https://www.udrop.com/PGSM"
+    },
+    {
+      "name": "exp 2.py",
+      "folder": false,
+      "path": [
+        "cloud1",
+        "Python",
+        "cli"
+      ],
+      "size": 363,
+      "extension": "py",
+      "modified": null,
+      "description": "exp,2,py",
+      "url": "https://www.udrop.com/PGSH"
+    },
+    {
+      "name": "exp 3.py",
+      "folder": false,
+      "path": [
+        "cloud1",
+        "Python",
+        "cli"
+      ],
+      "size": 156,
+      "extension": "py",
+      "modified": null,
+      "description": "exp,3,py",
+      "url": "https://www.udrop.com/PGSI"
+    },
+    {
+      "name": "exp 4.py",
+      "folder": false,
+      "path": [
+        "cloud1",
+        "Python",
+        "cli"
+      ],
+      "size": 1159,
+      "extension": "py",
+      "modified": null,
+      "description": "exp,4,py",
+      "url": "https://www.udrop.com/PGSJ"
+    },
+    {
+      "name": "exp 5.py",
+      "folder": false,
+      "path": [
+        "cloud1",
+        "Python",
+        "cli"
+      ],
+      "size": 410,
+      "extension": "py",
+      "modified": null,
+      "description": "exp,5,py",
+      "url": "https://www.udrop.com/PGSK"
+    },
+    {
+      "name": "exp 6.py",
+      "folder": false,
+      "path": [
+        "cloud1",
+        "Python",
+        "cli"
+      ],
+      "size": 127,
+      "extension": "py",
+      "modified": null,
+      "description": "exp,6,py",
+      "url": "https://www.udrop.com/PGSL"
+    }
+  ],
+  "generated": "2026-09-21T18:31:10.626Z"
 }
