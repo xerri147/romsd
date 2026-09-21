@@ -78,7 +78,7 @@
   .scroll{overflow-x:auto}
 
   .head{
-    display:flex;min-width:560px;
+    display:flex;min-width:630px;
     background:var(--face);border-bottom:1px solid var(--line);
     font-weight:700;font-size:12px;padding:5px 10px;
   }
@@ -86,8 +86,9 @@
   .head .d{width:120px;flex:none}
   .head .s{width:70px;flex:none;text-align:right}
   .head .x{width:150px;flex:none;padding-left:14px}
+  .head .z{width:70px;flex:none;text-align:right}
 
-  .tree{min-width:560px;background:var(--paper)}
+  .tree{min-width:630px;background:var(--paper)}
   .row{display:flex;align-items:baseline;padding:3px 10px;white-space:pre}
   .row:nth-child(even){background:#f3f1ea}
   .row:hover{background:#e3ecf5}
@@ -96,6 +97,7 @@
   .row .s{width:70px;flex:none;text-align:right;color:var(--dim);font-size:12px}
   .row .x{width:150px;flex:none;padding-left:14px;color:var(--dim);font-size:12px;
           overflow:hidden;text-overflow:ellipsis}
+  .row .z{width:70px;flex:none;text-align:right;font-size:12px}
 
   .guide{color:var(--line)}
   .toggle{
@@ -110,6 +112,14 @@
   .nolink{color:var(--dim)}
   mark{background:#fff0a8;color:inherit}
 
+  .zipbtn{
+    font:inherit;font-size:11px;padding:0 6px;cursor:pointer;
+    background:none;color:var(--sel);
+    border:1px solid var(--line);
+  }
+  .zipbtn:hover{border-color:var(--sel)}
+  .zipbtn:disabled{color:var(--dim);border-color:var(--line);cursor:default}
+
   .statusbar{
     display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;
     padding:6px 10px;border-top:1px solid var(--line);
@@ -121,6 +131,7 @@
   @media (max-width:560px){
     .head .d,.row .d{display:none}
     .head .x,.row .x{display:none}
+    .head .z,.row .z{width:46px}
     body{padding:0 0 30px}
     .window{border-width:0 0 2px}
   }
@@ -147,6 +158,7 @@
       <span class="d">Date modified</span>
       <span class="s">Size</span>
       <span class="x">Description</span>
+      <span class="z"></span>
     </div>
     <div class="tree" id="tree"></div>
   </div>
@@ -167,6 +179,9 @@ let root = { name: ROOT_LABEL, folder: true, children: [], key: '' };
 let generated = null;
 let open = new Set(['']);            // expanded folder keys; root starts open
 let nextAt = Date.now() + REFRESH_MS;
+let nodesByKey = new Map();          // rebuilt on every render(); folders only
+const ZIP_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+let jszipReady = null;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
@@ -241,15 +256,19 @@ function render() {
   const out = [];
   rows(root, '', true, 0, q, out);
 
+  nodesByKey = new Map([['', root]]);
+
   const rootOpen = open.has('');
   const head =
     `<div class="row"><span class="n">` +
     `<button class="toggle" type="button" data-key="" aria-expanded="${rootOpen}">` +
     `${rootOpen ? '−' : '+'}</button> <span class="icon">${rootOpen ? '▾' : '▸'}</span>` +
     `<span class="dir">${esc(ROOT_LABEL)}</span>` +
-    `</span><span class="d"></span><span class="s"></span><span class="x"></span></div>`;
+    `</span><span class="d"></span><span class="s"></span><span class="x"></span>` +
+    `<span class="z"><button class="zipbtn" type="button" data-zip="">zip</button></span></div>`;
 
   const body = out.map(({ node, prefix, isLast, expanded, hasKids }) => {
+    if (hasKids) nodesByKey.set(node.key, node);
     const guide = `<span class="guide">${prefix}${isLast ? '└── ' : '├── '}</span>`;
     let label;
     if (hasKids) {
@@ -262,11 +281,15 @@ function render() {
     } else {
       label = `<span class="icon"> </span><span class="nolink">${mark(node.name, q)}</span>`;
     }
+    const zip = hasKids
+      ? `<button class="zipbtn" type="button" data-zip="${esc(node.key)}">zip</button>`
+      : '';
     return `<div class="row">` +
       `<span class="n">${guide}${label}</span>` +
       `<span class="d">${when(node.modified)}</span>` +
       `<span class="s">${node.folder ? '' : bytes(node.size)}</span>` +
       `<span class="x">${esc(node.description || '')}</span>` +
+      `<span class="z">${zip}</span>` +
       `</div>`;
   }).join('');
 
@@ -329,7 +352,100 @@ function tick() {
     String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
 }
 
+function loadJSZip() {
+  if (window.JSZip) return Promise.resolve();
+  if (jszipReady) return jszipReady;
+  jszipReady = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = ZIP_LIB;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Could not load the zip library (offline, or the CDN is blocked).'));
+    document.head.appendChild(s);
+  });
+  return jszipReady;
+}
+
+/** Every downloadable file under `node`, with its path relative to node. */
+function collectDownloads(node, prefix, out) {
+  (node.children || []).forEach((c) => {
+    if (c.children) collectDownloads(c, prefix + c.name + '/', out);
+    else if (c.url) out.push({ url: c.url, rel: prefix + c.name });
+  });
+  return out;
+}
+
+async function zipFolder(node, btn) {
+  const files = collectDownloads(node, '', []);
+  if (!files.length) {
+    alert('Nothing in this folder has a download link yet.');
+    return;
+  }
+
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    await loadJSZip();
+    const zip = new JSZip();
+    const queue = files.slice();
+    let done = 0, failed = 0;
+
+    async function worker() {
+      while (queue.length) {
+        const f = queue.shift();
+        try {
+          const res = await fetch(f.url);
+          if (!res.ok) throw new Error(String(res.status));
+          zip.file(f.rel, await res.blob());
+        } catch {
+          failed++;
+        }
+        done++;
+        btn.textContent = `${done}/${files.length}${failed ? ` (${failed} failed)` : ''}`;
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(4, files.length) }, worker));
+
+    if (done === failed) {
+      throw new Error(
+        "Couldn't fetch any files directly \u2014 the download links are probably " +
+        "landing pages rather than the raw file, which this browser-side zip can't get past."
+      );
+    }
+
+    btn.textContent = 'Compressing…';
+    const blob = await zip.generateAsync({ type: 'blob' }, (meta) => {
+      btn.textContent = `Compressing ${Math.round(meta.percent)}%`;
+    });
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (node.name || 'files').replace(/[\\/:*?"<>|]/g, '_') + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+
+    if (failed) {
+      alert(`${failed} of ${files.length} files couldn't be added to the zip. ` +
+            `The rest downloaded fine \u2014 open the missing ones individually.`);
+    }
+  } catch (err) {
+    alert('Could not build the zip.\n\n' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
 $('tree').addEventListener('click', (e) => {
+  const zipBtn = e.target.closest('.zipbtn');
+  if (zipBtn) {
+    const node = nodesByKey.get(zipBtn.dataset.zip);
+    if (node) zipFolder(node, zipBtn);
+    return;
+  }
   const t = e.target.closest('.toggle');
   if (!t) return;
   const key = t.dataset.key;
